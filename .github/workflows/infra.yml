@@ -1,7 +1,7 @@
 name: Infrastructure Deploy
 
 on:
-  workflow_dispatch: # Allows you to click a button to deploy
+  workflow_dispatch:
   push:
     paths:
       - 'infra/**'
@@ -33,7 +33,7 @@ jobs:
         uses: pulumi/actions@v5
         with:
           command: up
-          stack-name: dev
+          stack-name: DLTKMandeep/dev  # <-- Updated with your username
           work-dir: infra/aws
           cloud-url: https://app.pulumi.com
         env:
