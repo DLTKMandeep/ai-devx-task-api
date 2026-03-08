@@ -1,0 +1,24 @@
+import pulumi
+import pulumi_aws as aws
+import random
+import string
+
+# Generate a unique bucket name to avoid global conflict
+suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+bucket_name = f"ai-devx-task-backups-{suffix}"
+
+# Create the bucket
+bucket = aws.s3.BucketV2("task-backups", bucket=bucket_name)
+
+# Enable versioning
+aws.s3.BucketVersioningV2(
+    "versioning",
+    bucket=bucket.id,
+    versioning_configuration=aws.s3.BucketVersioningV2VersioningConfigurationArgs(
+        status="Enabled"
+    )
+)
+
+# Export values for use in app
+pulumi.export("bucket_name", bucket.id)
+pulumi.export("bucket_arn", bucket.arn)
