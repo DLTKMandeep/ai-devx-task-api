@@ -9,59 +9,52 @@ Security by Default: Automated security scans at every stage
 Multi-Cloud Ready: Deploy to AWS, GCP, or Azure seamlessly
 Cost-Conscious: Free tier tools prioritized, with premium AI as optional enhancement
 📊 Complete Pipeline Flow
-┌──────────────┐      ┌──────────────┐      ┌──────────────┐      ┌──────────────────────────────┐
-│   DEVELOPER  │ ───> │  FEATURE CI  │ ───> │  PR CREATED  │ ───> │      AI INTELLIGENCE         │
-│              │      │              │      │              │      │                              │
-│  👨‍💻 Push    │      │  ⚡ Ruff     │      │  📝 Open PR  │      │  ┌────────────────────────┐ │
-│  feat/branch │      │  🧪 Pytest   │      │              │      │  │   COMMERCIAL AI        │ │
-│              │      │  🔒 Bandit   │      │              │      │  │  ─────────────────     │ │
-│              │      │  📊 Coverage │      │              │      │  │  🟣 Claude (Anthropic) │ │
-│              │      │              │      │              │      │  │  🔵 GPT-4 (OpenAI)     │ │
-│              │      │  ✅ Status   │      │              │      │  │  🔴 Gemini (Google)    │ │
-└──────────────┘      └──────────────┘      └──────────────┘      │  │  🟠 Copilot (GitHub)   │ │
-                                                                   │  └────────────────────────┘ │
-                                                                   │           ⬇️                 │
-                                                                   │  📄 PR Summary              │
-                                                                   │  📚 Doc Updates             │
-                                                                   │  🔍 Code Review             │
-                                                                   │  🧪 Test Suggestions        │
-                                                                   │           ⬆️                 │
-                                                                   │  ┌────────────────────────┐ │
-                                                                   │  │   OPEN SOURCE AI       │ │
-                                                                   │  │  ─────────────────     │ │
-                                                                   │  │  🟢 Llama 3 (Meta)     │ │
-                                                                   │  │  🟡 Mistral            │ │
-                                                                   │  │  🔶 Ollama (Local)     │ │
-                                                                   │  │  🟣 CodeLlama          │ │
-                                                                   │  └────────────────────────┘ │
-                                                                   └──────────────────────────────┘
-                                                                              │
-                                                                              ⬇️
-┌──────────────┐      ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
-│  PR CHECKS   │ ───> │  MERGE GATE  │ ───> │   MAIN CI    │ ───> │  AI DOCS     │
-│              │      │              │      │              │      │  UPDATE      │
-│  🔐 CodeQL   │      │  🛡️ Branch   │      │  🔄 Full     │      │              │
-│  🐳 Trivy    │      │    Protection│      │    Tests     │      │  📐 Mermaid  │
-│  📈 SonarQube│      │  👥 Approvals│      │  🏗️ Build    │      │    Diagrams  │
-│  🔍 Semgrep  │      │  ✅ Auto-    │      │    Artifacts │      │  📖 API Docs │
-│              │      │    Merge     │      │  ☁️ Infra    │      │  📝 Changelog│
-│  ✅ All Pass │      │              │      │    Checks    │      │              │
-└──────────────┘      └──────────────┘      └──────────────┘      └──────────────┘
-                                                                              │
-                                                                              ⬇️
-┌──────────────┐      ┌──────────────────────────────────────────────────────────┐
-│   RELEASE    │ ───> │              CD / DEPLOYMENT                             │
-│              │      │                                                          │
-│  🏷️ Semantic │      │  ☁️ Multi-Cloud Deployment                              │
-│    Versioning│      │  ┌──────────┐  ┌──────────┐  ┌──────────┐             │
-│  📋 AI-Gen   │      │  │   AWS    │  │   GCP    │  │  Azure   │             │
-│    Release   │      │  │  Lambda  │  │  Cloud   │  │   App    │             │
-│    Notes     │      │  │  ECS/EKS │  │  Run     │  │  Service │             │
-│  🎉 GitHub   │      │  └──────────┘  └──────────┘  └──────────┘             │
-│    Release   │      │                                                          │
-│              │      │  📊 Monitoring: Datadog, New Relic, Sentry              │
-│              │      │  🔔 Notifications: Slack, Teams, PagerDuty              │
-└──────────────┘      └──────────────────────────────────────────────────────────┘
+
+```mermaid
+flowchart LR
+
+%% Nodes
+A[👨‍💻 Developer\nPush feat/branch]
+B[⚡ Feature CI\nRuff\nPytest\nBandit\nCoverage]
+C[📝 PR Created\nOpen Pull Request]
+D[🤖 AI Intelligence\nPR Summary\nDocs\nCode Review\nTest Suggestions]
+
+E[🔐 PR Checks\nCodeQL\nTrivy\nSonarQube\nSemgrep]
+F[🛡 Merge Gate\nBranch Protection\nApprovals\nAuto Merge]
+G[🔄 Main CI\nFull Tests\nBuild Artifacts\nInfra Checks]
+H[📚 AI Docs Update\nMermaid\nAPI Docs\nChangelog]
+
+I[🏷 Release\nSemantic Version\nAI Release Notes]
+J[☁ Multi-Cloud Deployment\nAWS • GCP • Azure\nMonitoring\nNotifications]
+
+%% Flow
+A --> B
+B --> C
+C --> D
+D --> E
+E --> F
+F --> G
+G --> H
+H --> I
+I --> J
+
+%% Styling
+classDef dev fill:#E3F2FD,stroke:#1E88E5,color:#0D47A1
+classDef ci fill:#E8F5E9,stroke:#43A047,color:#1B5E20
+classDef ai fill:#F3E5F5,stroke:#8E24AA,color:#4A148C
+classDef security fill:#FFF3E0,stroke:#FB8C00,color:#E65100
+classDef deploy fill:#E0F7FA,stroke:#00ACC1,color:#004D40
+classDef release fill:#FCE4EC,stroke:#D81B60,color:#880E4F
+
+class A dev
+class B,G ci
+class D,H ai
+class E,F security
+class J deploy
+class I release
+```
+
+
 🔄 Detailed Stage Breakdown
 Stage 1: Developer Push to Feature Branch
 Trigger: git push origin feat/*
