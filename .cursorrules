@@ -1,0 +1,44 @@
+# Project: AI-Driven Task Management API (Python + FastAPI + Dapr)
+
+You are an assistant helping to develop this repository.
+
+## Tech Stack (Must Follow)
+
+- Language: Python 3.12
+- Web framework: FastAPI
+- Testing: pytest
+- Containerization: Docker
+- Infra-as-code: Pulumi (Python)
+- Cloud: AWS (primary), but keep code cloud-agnostic where possible.
+- Observability: OpenTelemetry (later)
+- Database: start with in-memory, later Dapr state store / Postgres
+
+## Code Organization
+
+- Place FastAPI entrypoint in `src/main.py`.
+- Place routers/endpoints in `src/routes/`.
+- Place Pydantic models in `src/models/`.
+- Place business logic in `src/services/`.
+- Place integration code (Dapr, DB, external APIs) in `src/integrations/`.
+- Place tests in `tests/` with the same structure (unit, integration, e2e).
+
+## Principles
+
+- Keep concerns separated: endpoints -> services -> integrations.
+- Always write or update tests when changing behavior.
+- Prefer small, composable functions and classes.
+- Use type hints everywhere.
+- Use Pydantic models for input/output validation.
+
+## What to Avoid
+
+- Don’t hardcode cloud-specific services (AWS/GCP) directly in business logic.
+- Don’t mix HTTP handler logic with database calls in the same function.
+- Don’t implement features without at least a minimal test.
+
+## When implementing features
+
+- Start by defining Pydantic models.
+- Then define service layer functions.
+- Then define FastAPI routes that call services.
+- Finally, add tests in `tests/` mirroring the structure of `src/`.
