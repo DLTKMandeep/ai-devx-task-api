@@ -24,17 +24,21 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install Pulumi CLI
+        run: curl -fsSL https://get.pulumi.com | sh
+
       - name: Install dependencies
         run: |
           cd infra/aws
-          pip install -r requirements.txt || pip install pulumi pulumi-aws
+          pip install pulumi pulumi-aws
 
-      - name: Pulumi Up
-        uses: pulumi/actions@v5
-        with:
-          command: up
-          stack-name: DLTKMandeep/dev  # <-- Updated with your username
-          work-dir: infra/aws
-          cloud-url: https://app.pulumi.com
+      - name: Pulumi Up (Direct Shell)
+        run: |
+          export PATH=$PATH:$HOME/.pulumi/bin
+          cd infra/aws
+          # Direct login to bypass the JS wrapper bug
+          pulumi login
+          # Run the update
+          pulumi up --yes --stack DLTKMandeep/dev --non-interactive
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
