@@ -1,36 +1,40 @@
-name: CI
+name: CI Pipeline
 
 on:
-pull_request:
-push:
-branches: [ main ]
+  push:
+    branches: [main, feat/*]
+  pull_request:
+    branches: [main]
 
 jobs:
-quality-gate:
-runs-on: ubuntu-latest
-steps:
-- uses: actions/checkout@v4
+  quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-  - uses: actions/setup-python@v5
-    with:
-      python-version: "3.12"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: pip
 
-  - name: Install dependencies
-    run: pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest httpx fastapi pydantic bandit isort
 
-- name: Auto-fix formatting (Ruff)
+      - name: Auto-fix formatting (Ruff)
         run: ruff check . --fix
-        
-  - name: Lint & Format Check (Ruff)
-    run: |
-      ruff check .
-      ruff format --check .
 
-  - name: Run Tests
-    run: pytest tests/ -v --junitxml=report.xml
+      - name: ⚡ Lint & Format Check (Ruff)
+        run: |
+          ruff check .
+          ruff format --check .
 
-  - name: Upload Test Report
-    uses: actions/upload-artifact@v4
-    with:
-      name: test-report
-      path: report.xml
+      - name: 🔒 Security Scan (Bandit)
+        run: bandit -r src/
+
+      - name: 🧪 Run Tests (Pytest)
+        run: |
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+          pytest tests/ -v
