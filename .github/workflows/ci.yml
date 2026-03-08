@@ -23,10 +23,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install ruff pytest httpx fastapi pydantic bandit isort
 
-      - name: Auto-fix formatting (Ruff)
-        run: ruff check . --fix
+      - name: 🪄 Auto-fix Lint & Format (Ruff)
+        run: |
+          ruff check . --fix
+          ruff format .
 
-      - name: ⚡ Lint & Format Check (Ruff)
+      - name: ⚡ Verify Quality Gate (Ruff)
         run: |
           ruff check .
           ruff format --check .
