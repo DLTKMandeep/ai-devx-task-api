@@ -76,6 +76,7 @@ jobs:
           base: main
           branch: ${{ github.ref_name }}
           title: "Auto PR: ${{ github.ref_name }} → main"
+          update-pull-request-branch: false
 
 ################################################
 # Auto Merge
