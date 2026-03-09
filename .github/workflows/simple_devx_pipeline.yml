@@ -75,6 +75,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: main
           branch: ${{ github.ref_name }}
+          branch-suffix: -pr
           title: "Auto PR: ${{ github.ref_name }} → main"
           update-pull-request-branch: false
 
