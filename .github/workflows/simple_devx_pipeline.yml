@@ -1,0 +1,160 @@
+name: Simple DevX Pipeline
+
+permissions:
+  contents: write
+  pull-requests: write
+
+on:
+  push:
+    branches:
+      - "**"
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+
+  ci:
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest httpx fastapi pydantic bandit
+      - name: 🔧 Fix & Format Code (Ruff)
+        run: |
+          ruff format .
+          ruff check . --fix
+      - name: ⚡ Lint & Format Check (Ruff)
+        run: ruff check .
+      - name: 🔒 Security Scan (Bandit)
+        run: |
+          bandit -r src/
+      - name: 🧪 Run Tests (Pytest)
+        run: |
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+          pytest tests/ -v
+
+  create-pr:
+    needs: ci
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      pr: ${{ steps.pr.outputs.pull-request-number }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create PR
+        id: pr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: main
+          branch: ${{ github.ref_name }}-pr
+          title: "Auto PR: ${{ github.ref_name }} → main"
+          update-pull-request-branch: false
+
+  merge:
+    needs: create-pr
+    if: needs.create-pr.outputs.pr != ''
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - run: sleep 10
+      - name: Wait for PR checks
+        run: |
+          pr_number=${{ needs.create-pr.outputs.pr }}
+          echo "Waiting for checks on PR #$pr_number"
+          timeout=600
+          elapsed=0
+          while [ $elapsed -lt $timeout ]; do
+            status=$(gh pr view $pr_number --json statusCheckRollup -q '.statusCheckRollup.state')
+            if [ "$status" = "SUCCESS" ]; then
+              echo "Checks passed!"
+              break
+            elif [ "$status" = "FAILURE" ]; then
+              echo "Checks failed. Aborting merge."
+              exit 1
+            fi
+            sleep 30
+            elapsed=$((elapsed + 30))
+          done
+          if [ $elapsed -ge $timeout ]; then
+            echo "Timeout waiting for checks."
+            exit 1
+          fi
+      - name: Merge PR
+        run: gh pr merge ${{ needs.create-pr.outputs.pr }} --merge --delete-branch
+
+  deploy-qa:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: QA
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Pulumi
+        run: curl -fsSL https://get.pulumi.com | sh
+      - name: Deploy QA
+        run: |
+          export PATH=$PATH:$HOME/.pulumi/bin
+          cd infra/aws
+          pip install pulumi pulumi-aws
+          pulumi login
+          pulumi stack select DLTKMandeep/qa
+          pulumi up --yes --non-interactive
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+
+  qa-tests:
+    needs: deploy-qa
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run tests
+        run: |
+          pip install pytest
+          pytest tests/ -v
+
+  deploy-prod:
+    needs: qa-tests
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Pulumi
+        run: curl -fsSL https://get.pulumi.com | sh
+      - name: Deploy PROD
+        run: |
+          export PATH=$PATH:$HOME/.pulumi/bin
+          cd infra/aws
+          pip install pulumi pulumi-aws
+          pulumi login
+          pulumi stack select DLTKMandeep/prod
+          pulumi up --yes --non-interactive
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
