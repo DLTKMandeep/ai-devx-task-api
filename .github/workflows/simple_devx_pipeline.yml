@@ -58,7 +58,6 @@ jobs:
           base: main
           branch: ${{ github.ref_name }}-pr
           title: "Auto PR: ${{ github.ref_name }} → main"
-          update-pull-request-branch: false
 
   merge:
     needs: create-pr
@@ -90,8 +89,11 @@ jobs:
             echo "Timeout waiting for checks."
             exit 1
           fi
-      - name: Merge PR
-        run: gh pr merge ${{ needs.create-pr.outputs.pr }} --merge --delete-branch
+      - name: Enable auto-merge and merge PR
+        run: |
+          pr_number=${{ needs.create-pr.outputs.pr }}
+          gh pr merge $pr_number --merge --auto --delete-branch
+          echo "Auto-merge enabled and PR #$pr_number queued for merge."
 
   deploy-qa:
     if: github.ref == 'refs/heads/main'
@@ -116,7 +118,7 @@ jobs:
           cd infra/aws
           pip install pulumi pulumi-aws
           pulumi login
-          pulumi stack select DLTKMandeep/qa
+          pulumi stack select DLTKMandeep/qa || pulumi stack init DLTKMandeep/qa
           pulumi up --yes --non-interactive
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
@@ -154,7 +156,7 @@ jobs:
           cd infra/aws
           pip install pulumi pulumi-aws
           pulumi login
-          pulumi stack select DLTKMandeep/prod
+          pulumi stack select DLTKMandeep/prod || pulumi stack init DLTKMandeep/prod
           pulumi up --yes --non-interactive
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
