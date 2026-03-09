@@ -35,25 +35,20 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install ruff pytest httpx fastapi pydantic bandit
-
       - name: 🔧 Fix & Format Code (Ruff)
         run: |
           ruff format .
           ruff check . --fix
-
       - name: ⚡ Lint & Format Check (Ruff)
         run: ruff check .
 
       - name: 🔒 Security Scan (Bandit)
         run: |
           bandit -r src/
-
       - name: 🧪 Run Tests (Pytest)
         run: |
           export PYTHONPATH=$PYTHONPATH:$(pwd)/src
           pytest tests/ -v
-
-
 ################################################
 # Auto PR
 ################################################
@@ -78,13 +73,6 @@ jobs:
           branch: ${{ github.ref_name }}
           title: "Auto PR: ${{ github.ref_name }} → main"
 
-      - name: Check if PR was created
-        if: steps.pr.outputs.pull-request-number == ''
-        run: |
-          echo "No PR created: Branch '${{ github.ref_name }}' has no differences from 'main'."
-          echo "Ensure your branch has new commits before pushing."
-          exit 1
-
 
 ################################################
 # Auto Merge
@@ -99,49 +87,18 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - run: sleep 10
-
-      - name: Wait for PR checks
-        run: |
-          pr_number=${{ needs.create-pr.outputs.pr }}
-          echo "Waiting for checks on PR #$pr_number"
-          timeout=300
-          elapsed=0
-          while [ $elapsed -lt $timeout ]; do
-            status=$(gh pr view $pr_number --json statusCheckRollup -q '.statusCheckRollup.state')
-            if [ "$status" = "SUCCESS" ]; then
-              echo "Checks passed!"
-              break
-            elif [ "$status" = "FAILURE" ]; then
-              echo "Checks failed. Aborting merge."
-              exit 1
-            fi
-            sleep 10
-            elapsed=$((elapsed + 10))
-          done
-          if [ $elapsed -ge $timeout ]; then
-            echo "Timeout waiting for checks."
-            exit 1
-          fi
+      - run: sleep 5
 
       - name: Merge PR
         run: |
-          pr_number=${{ needs.create-pr.outputs.pr }}
-          gh pr merge $pr_number --merge --delete-branch
-          echo "PR #$pr_number merged successfully."
-
-      - name: Fallback: Manual Merge Note
-        if: failure()
-        run: |
-          echo "Auto-merge failed. Please merge PR ${{ needs.create-pr.outputs.pr }} manually."
-
-
+          gh pr merge ${{ needs.create-pr.outputs.pr }} \
+            --merge \
+            --delete-branch
 ################################################
 # QA Deploy (main)
 ################################################
 
   deploy-qa:
-    needs: merge
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: QA
@@ -190,13 +147,11 @@ jobs:
         run: |
           pip install pytest
           pytest tests/ -v
-
-
 ################################################
 # PROD Deploy
 ################################################
 
-  prod-deploy:
+  deploy-prod:
     needs: qa-tests
     runs-on: ubuntu-latest
     environment: production
