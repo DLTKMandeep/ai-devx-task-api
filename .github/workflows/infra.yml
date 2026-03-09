@@ -32,12 +32,12 @@ jobs:
           cd infra/aws
           pip install pulumi pulumi-aws
 
-      - name: Pulumi Up (Dev)
+      - name: Init and Deploy Dev
         run: |
           export PATH=$PATH:$HOME/.pulumi/bin
           cd infra/aws
           pulumi login
-          pulumi stack select DLTKMandeep/dev || pulumi stack init DLTKMandeep/dev
+          pulumi stack init DLTKMandeep/dev
           pulumi up --yes --non-interactive
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
@@ -68,12 +68,12 @@ jobs:
           cd infra/aws
           pip install pulumi pulumi-aws
 
-      - name: Pulumi Up (QA)
+      - name: Init and Deploy QA
         run: |
           export PATH=$PATH:$HOME/.pulumi/bin
           cd infra/aws
           pulumi login
-          pulumi stack select DLTKMandeep/qa || pulumi stack init DLTKMandeep/qa
+          pulumi stack init DLTKMandeep/qa
           pulumi up --yes --non-interactive
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
@@ -104,12 +104,12 @@ jobs:
           cd infra/aws
           pip install pulumi pulumi-aws
 
-      - name: Pulumi Up (PROD)
+      - name: Init and Deploy PROD
         run: |
           export PATH=$PATH:$HOME/.pulumi/bin
           cd infra/aws
           pulumi login
-          pulumi stack select DLTKMandeep/prod || pulumi stack init DLTKMandeep/prod
+          pulumi stack init DLTKMandeep/prod
           pulumi up --yes --non-interactive
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
