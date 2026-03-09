@@ -7,7 +7,7 @@ on:
       - 'infra/**'
 
 jobs:
-  deploy:
+  deploy-dev:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,13 +32,84 @@ jobs:
           cd infra/aws
           pip install pulumi pulumi-aws
 
-      - name: Pulumi Up (Direct Shell)
+      - name: Pulumi Up (Dev)
         run: |
           export PATH=$PATH:$HOME/.pulumi/bin
           cd infra/aws
-          # Direct login to bypass the JS wrapper bug
           pulumi login
-          # Run the update
-          pulumi up --yes --stack DLTKMandeep/dev --non-interactive
+          pulumi stack select DLTKMandeep/dev || pulumi stack init DLTKMandeep/dev
+          pulumi up --yes --non-interactive
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+
+  deploy-qa:
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Pulumi CLI
+        run: curl -fsSL https://get.pulumi.com | sh
+
+      - name: Install dependencies
+        run: |
+          cd infra/aws
+          pip install pulumi pulumi-aws
+
+      - name: Pulumi Up (QA)
+        run: |
+          export PATH=$PATH:$HOME/.pulumi/bin
+          cd infra/aws
+          pulumi login
+          pulumi stack select DLTKMandeep/qa || pulumi stack init DLTKMandeep/qa
+          pulumi up --yes --non-interactive
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+
+  deploy-prod:
+    needs: deploy-qa
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Pulumi CLI
+        run: curl -fsSL https://get.pulumi.com | sh
+
+      - name: Install dependencies
+        run: |
+          cd infra/aws
+          pip install pulumi pulumi-aws
+
+      - name: Pulumi Up (PROD)
+        run: |
+          export PATH=$PATH:$HOME/.pulumi/bin
+          cd infra/aws
+          pulumi login
+          pulumi stack select DLTKMandeep/prod || pulumi stack init DLTKMandeep/prod
+          pulumi up --yes --non-interactive
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
