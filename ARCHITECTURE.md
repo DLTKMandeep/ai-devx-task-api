@@ -1,5 +1,5 @@
 # System Architecture
-
+#test
 ```mermaid
 graph TD
     Client[Browser/Curl] -->|HTTP| API[FastAPI - src/main.py]
