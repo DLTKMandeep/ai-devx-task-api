@@ -16,13 +16,11 @@ env:
 
 jobs:
 ################################################
-# 1. CI, AUTO-FIX, PR & ADMIN MERGE
+# 1. CI, AUTO-FIX, PR & MERGE
 ################################################
   ci-and-auto-merge:
     if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
-    outputs:
-      pr_number: ${{ steps.cpr.outputs.pull-request-number }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,12 +32,10 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
 
-      - name: Install CI Tools
-        run: |
-          python -m pip install --upgrade pip
-          pip install ruff pytest httpx fastapi pydantic bandit
+      - name: Install Tools
+        run: pip install ruff pytest bandit
 
-      - name: 🔧 Auto-Fix & Unit Test
+      - name: 🔧 Auto-Fix & Test
         run: |
           ruff format .
           ruff check . --fix
@@ -54,18 +50,19 @@ jobs:
           base: main
           branch: ${{ github.ref_name }}-auto-pr
           title: "🚀 Auto-Merge: ${{ github.ref_name }}"
-          commit-message: "chore: automated devx fixes and formatting"
+          commit-message: "chore: automated devx fixes"
           delete-branch: true
 
-      - name: ⚡ Force Merge (Admin Bypass)
-        if: steps.cpr.outputs.pull-request-number != ''
+      - name: ⚡ Merge to Main
+        # Only run if the PR was actually created (steps.cpr.outputs.pull-request-number exists)
+        if: steps.cpr.outputs.pull-request-operation == 'created' || steps.cpr.outputs.pull-request-number != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Wait for GitHub to index the PR
           sleep 5
-          # Using --admin bypasses the "Self-Approval" restriction
-          gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --merge --admin --delete-branch
+          # Since you have NO protections, we don't need --admin. 
+          # We just need a standard merge.
+          gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --merge --delete-branch
 
 ################################################
 # 2. QA DEPLOYMENT (Triggered by merge to main)
@@ -76,7 +73,6 @@ jobs:
     environment: QA
     steps:
       - uses: actions/checkout@v4
-
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -84,7 +80,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
       
-      - name: Deploy to QA (Pulumi)
+      - name: Deploy to QA
         run: |
           curl -fsSL https://get.pulumi.com | sh
           export PATH=$PATH:$HOME/.pulumi/bin
@@ -96,40 +92,29 @@ jobs:
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
 
-################################################
-# 3. QA POST-DEPLOYMENT TESTS
-################################################
   qa-tests:
     needs: deploy-qa
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run E2E Integration Tests
-        run: |
+      - run: |
           pip install pytest httpx
-          export PYTHONPATH=$PYTHONPATH:$(pwd)/src
           pytest tests/ -v
 
-################################################
-# 4. PRODUCTION DEPLOYMENT (Gated by QA Tests)
-################################################
   deploy-prod:
     needs: qa-tests
     runs-on: ubuntu-latest
     environment: production
     steps:
       - uses: actions/checkout@v4
-      
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-
-      - name: Deploy to PROD (Pulumi)
+      - name: Deploy to PROD
         run: |
-          curl -fsSL https://get.pulumi.com | sh
           export PATH=$PATH:$HOME/.pulumi/bin
           cd infra/aws
           pip install pulumi pulumi-aws
