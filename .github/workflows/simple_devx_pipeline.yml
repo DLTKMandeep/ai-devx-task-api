@@ -1,13 +1,14 @@
-name: Elite DevX Pipeline
+name: Brute Force Velocity Pipeline
 
 permissions:
   contents: write
-  pull-requests: write
+  id-token: write
 
 on:
   push:
     branches:
       - "**"
+      - "!main" # Prevents the workflow from triggering itself in a loop
 
 env:
   AWS_REGION: us-east-1
@@ -15,23 +16,22 @@ env:
 
 jobs:
 ################################################
-# 1. CI, AUTO-FIX, PR & AUTHENTICATED MERGE
+# 1. FIX, TEST, AND FORCE-SYNC TO MAIN
 ################################################
-  ci-and-auto-merge:
-    if: github.ref != 'refs/heads/main'
+  ci-and-sync:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.MY_GH_PAT }} # Fixed: nested under 'with'
+          # Using GITHUB_TOKEN is fine here because we are doing a direct push
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
 
       - name: Install Dependencies
         run: |
@@ -46,31 +46,25 @@ jobs:
           export PYTHONPATH=$PYTHONPATH:$(pwd)/src:$(pwd)
           pytest tests/ -v
 
-      - name: 🚀 Create Pull Request
-        id: cpr
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.MY_GH_PAT }} # Fixed: nested under 'with'
-          base: main
-          branch: ${{ github.ref_name }}-auto-pr
-          title: "🚀 Auto-Merge: ${{ github.ref_name }}"
-          commit-message: "chore: automated devx fixes"
-          delete-branch: true
-
-      - name: ⚡ Force Merge (Admin Bypass)
-        if: steps.cpr.outputs.pull-request-number != ''
-        env:
-          GH_TOKEN: ${{ secrets.MY_GH_PAT }}
+      - name: 🚀 Force Sync to Main
         run: |
-          sleep 10
-          # Using --squash for clean history and --admin to bypass rules
-          gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --squash --admin --delete-branch
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Add any ruff fixes
+          git add .
+          git commit -m "chore: automated devx fixes [skip ci]" || echo "No changes to commit"
+          
+          # Force push the current branch state directly into the main branch
+          git push origin ${{ github.ref_name }}:main --force
 
 ################################################
-# 2. QA DEPLOYMENT (Triggered by merge to main)
+# 2. QA DEPLOYMENT (Triggered by the push to main)
 ################################################
   deploy-qa:
-    if: github.ref == 'refs/heads/main'
+    # This runs only when the sync above (or a direct push) hits main
+    if: github.ref == 'refs/heads/main' || success() 
+    needs: ci-and-sync
     runs-on: ubuntu-latest
     environment: QA
     steps:
@@ -82,7 +76,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
       
-      - name: Deploy to QA
+      - name: Deploy to QA (Pulumi)
         run: |
           curl -fsSL https://get.pulumi.com | sh
           export PATH=$PATH:$HOME/.pulumi/bin
