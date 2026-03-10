@@ -1,5 +1,5 @@
-import pytest
 from fastapi.testclient import TestClient
+
 from src.main import app
 
 client = TestClient(app)
@@ -10,14 +10,16 @@ HTTP_CREATED = 201
 HTTP_NOT_FOUND = 404
 HTTP_UNPROCESSABLE_ENTITY = 422
 
+
 def test_read_root():
     response = client.get("/")
     assert response.status_code == HTTP_OK
     # Updated to match actual response
     assert response.json() == {
         "message": "Welcome to the AI DevX Task API",
-        "status": "running"
+        "status": "running",
     }
+
 
 def test_create_task():
     # Remove 'id' since it's auto-generated; API expects only title and description
@@ -35,6 +37,7 @@ def test_create_task():
     assert not data["completed"]
     assert data["assigned_to"] is None
 
+
 def test_get_tasks_empty():
     # Since tests run in order, this will have the created task
     response = client.get("/tasks/")
@@ -42,6 +45,7 @@ def test_get_tasks_empty():
     tasks = response.json()
     assert len(tasks) == 1
     assert tasks[0]["title"] == "Test Task"
+
 
 def test_get_task_not_found():
     # API validates ID format; use invalid UUID to trigger 422
