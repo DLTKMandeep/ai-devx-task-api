@@ -59,42 +59,6 @@ jobs:
           branch: ${{ github.ref_name }}-pr
           title: "Auto PR: ${{ github.ref_name }} → main"
 
-  merge:
-    needs: create-pr
-    if: needs.create-pr.outputs.pr != ''
-    runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - run: sleep 10
-      - name: Wait for PR checks
-        run: |
-          pr_number=${{ needs.create-pr.outputs.pr }}
-          echo "Waiting for checks on PR #$pr_number"
-          timeout=600
-          elapsed=0
-          while [ $elapsed -lt $timeout ]; do
-            status=$(gh pr view $pr_number --json statusCheckRollup -q '.statusCheckRollup.state')
-            if [ "$status" = "SUCCESS" ]; then
-              echo "Checks passed!"
-              break
-            elif [ "$status" = "FAILURE" ]; then
-              echo "Checks failed. Aborting merge."
-              exit 1
-            fi
-            sleep 30
-            elapsed=$((elapsed + 30))
-          done
-          if [ $elapsed -ge $timeout ]; then
-            echo "Timeout waiting for checks."
-            exit 1
-          fi
-      - name: Enable auto-merge and merge PR
-        run: |
-          pr_number=${{ needs.create-pr.outputs.pr }}
-          gh pr merge $pr_number --merge --auto --delete-branch
-          echo "Auto-merge enabled and PR #$pr_number queued for merge."
-
   deploy-qa:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
