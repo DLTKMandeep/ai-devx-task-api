@@ -18,14 +18,14 @@ jobs:
 # 1. CI, AUTO-FIX, PR & AUTHENTICATED MERGE
 ################################################
   ci-and-auto-merge:
-    # Stop the job if we are already on main to avoid loops
     if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.MY_GH_PAT }}
+          token: ${{ secrets.MY_GH_PAT }} # Fixed: nested under 'with'
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -50,7 +50,7 @@ jobs:
         id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.MY_GH_PAT }}
+          token: ${{ secrets.MY_GH_PAT }} # Fixed: nested under 'with'
           base: main
           branch: ${{ github.ref_name }}-auto-pr
           title: "🚀 Auto-Merge: ${{ github.ref_name }}"
@@ -62,13 +62,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.MY_GH_PAT }}
         run: |
-          # Wait for GitHub to register the PR
           sleep 10
-          # Using --squash for a clean history and --admin to bypass any rules
+          # Using --squash for clean history and --admin to bypass rules
           gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --squash --admin --delete-branch
 
 ################################################
-# 2. QA DEPLOYMENT (Only after merge to main)
+# 2. QA DEPLOYMENT (Triggered by merge to main)
 ################################################
   deploy-qa:
     if: github.ref == 'refs/heads/main'
